@@ -1,0 +1,28 @@
+@startuml
+
+Actor "actor" as Client
+participant "Web Interface" as WI
+participant "Application Server" as AS
+participant "Database" as DB
+participant "Email Service" as ES
+
+Client->WI: отправка формы регистрации: POST/user/{user_id}
+WI->AS: передача данных нового пользователя:POST/user/{user_id}
+AS->DB: проверка существующих e-mail: select e-mail from user
+
+alt e-mail не найден
+DB-->AS: почта свободна: 204 No Content
+AS->DB: создание новой учетной записи: insert into user
+DB-->AS: подтверждение создания: 201 Created
+AS->ES: отправка подтверждения на e-mail: POST/email
+ES->Client: отправка подтверждения регистрации на e-mail:POST/email
+AS->WI: регистрация завершена: 201 Created
+WI->Client: регистрация завершена: 201 Created
+
+else e-mail найден
+DB-->AS: почта найдена: 200 OK
+AS-->WI: пользователь найден: 409 Conflict
+WI-->Client: почта занята: 409 Conflict
+end 
+
+@enduml
