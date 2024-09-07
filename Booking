@@ -1,0 +1,51 @@
+@startuml
+actor Client
+participant "Web-Application" as WA
+participant "Authentication Service" as AS
+participant  "Booking service" as BS
+participant "database" as DB
+
+Client->WA: ввод логина и пароля: POST/login 
+WA->AS :запрос аутентификации:POST/auth
+AS->DB: проверка пароля и логина: select login, password from users
+
+alt аутентификация успешна
+DB-->AS: аутентификация успешна: 200 OK
+AS-->WA: подтверждение аутентификации: 200 OK
+WA->AS: запрос прав на авторизацию: GET/auth/permissions
+AS->DB:запрос авторизации: select permisssions from users
+DB-->AS: предоставление информации о правах пользователя: 200 OK
+AS-->WA: передача информации о правах пользователя: 200 OK
+WA-->Client: доступ в личных кабинет: 200 OK
+
+else аутентификация не прошла
+DB-->AS: пользователь не найден: 404 Not found
+AS-->WA: передача информации об отстутствии пользователя в БД: 401 unautherized
+WA->Client: повторный запрос логина и пароля: 401 unautherized
+
+end
+
+Client->WA:ввод данных бронировани: GET/hotels
+WA->BS: передача данных бронировани: GET/hotels
+BS->DB:запрос доступных номеров: select hotels
+
+alt номера найдены
+
+DB-->BS:передача списка доступных номеров: 200 OK
+BS-->WA: передача списка доступных номеров:200 OK
+WA-->Client: предоставление информации о доступных номерах: 200 OK
+Client->WA: подтверждение заказа: POST/booking/confirm
+WA->BS:передача данных для подтверждения: POST/booking/confirm
+BS->DB: сохранение информации о брони: inser into bookings
+DB-->BS: подтверждение брони: 201 Created
+BS-->WA: подтверждение бронирования: 201 Created
+WA-->Client: уведомление об успешности заказа: 201 Created
+
+else номера не найдены
+
+DB-->BS: отсутствии доступных номеров: 404 Not found
+BS-->WA: отсутствии доступных номеров: 404 Not found
+WA-->Client: отcутствие свободных номеров, предложить поменять даты: 404 Not found
+
+end
+@enduml
